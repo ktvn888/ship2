@@ -89,13 +89,13 @@ function adj(w,amt,why){if(!amt)return;S[w].bal+=amt;S[w].log.unshift({ts:Date.n
 function fx(t){
  if(t.status!=='done'||t.type==='ngoai')return{c:0,d:0};
  const fee=t.due-t.net, cashLike=t.pay!=='card';
- const r=cashLike?{c:S.set.cashFee?-fee:0,d:S.set.cashNet?t.net:0}:{c:0,d:t.net};
+ const r=cashLike?{c:S.set.cashFee?-t.due:0,d:S.set.cashNet?t.net:0} /* tiền mặt/chuyển khoản: ví tín dụng trừ đúng số tiền phải thu; phần chênh lệch chỉ để xem % */:{c:0,d:t.net};
  r.d+=(t.bonus||0)+(t.pay==='card'?t.tip||0:0);return r; // thưởng cuốc luôn cộng vào ví tài xế
 }
 const tname=t=>TYPES[t.type]+' #'+t.no;
 /* Hoàn tác phần đã áp lên ví, rồi áp lại theo dữ liệu mới */
 function revert(t,why){if(t.applied){adj('credit',-t.applied.c,why+' '+tname(t));adj('driver',-t.applied.d,why+' '+tname(t));t.applied=null}}
-function applyTrip(t){const f=fx(t);adj('credit',f.c,'Phí '+tname(t));const tw=t.pay==='card'?t.tip||0:0;adj('driver',f.d-(t.bonus||0)-tw,'Tiền ròng '+tname(t));adj('driver',t.bonus||0,'Thưởng '+tname(t));adj('driver',tw,'Tip '+tname(t));t.applied=f}
+function applyTrip(t){const f=fx(t);adj('credit',f.c,'Trừ tiền phải thu '+tname(t));const tw=t.pay==='card'?t.tip||0:0;adj('driver',f.d-(t.bonus||0)-tw,'Tiền ròng '+tname(t));adj('driver',t.bonus||0,'Thưởng '+tname(t));adj('driver',tw,'Tip '+tname(t));t.applied=f}
 /* Kiểm tra ví tín dụng có đủ không trước khi áp */
 function creditOk(t,old,go){const after=S.credit.bal-(old&&old.applied?old.applied.c:0)+fx(t).c;
  if(after>=0)go();else ask('Ví tín dụng không đủ (còn '+money(S.credit.bal)+', sau cuốc này '+money(after)+'). Vẫn tiếp tục?',go)}
@@ -299,7 +299,7 @@ function viewStats(){
 /* ================= CÀI ĐẶT ================= */
 function viewSet(){
  return `<div class="card"><label style="margin-top:0">Mục tiêu thu nhập mỗi ngày (đ)</label><input type="number" inputmode="numeric" value="${S.set.goal}" onchange="S.set.goal=num(this.value);save();toast('Đã lưu')">
- <div class="sw"><span>Cuốc tiền mặt/chuyển khoản: trừ phí vào ví tín dụng</span><input type="checkbox" ${S.set.cashFee?'checked':''} onchange="S.set.cashFee=this.checked;save()"></div>
+ <div class="sw"><span>Cuốc tiền mặt/chuyển khoản: trừ tiền phải thu khỏi ví tín dụng</span><input type="checkbox" ${S.set.cashFee?'checked':''} onchange="S.set.cashFee=this.checked;save()"></div>
  <div class="sw"><span>Cuốc tiền mặt/chuyển khoản: cộng tiền ròng vào ví tài xế</span><input type="checkbox" ${S.set.cashNet?'checked':''} onchange="S.set.cashNet=this.checked;save()"></div>
  <div class="mu">Thay đổi chỉ áp dụng cho cuốc lưu hoặc đổi trạng thái từ bây giờ. Cuốc cũ giữ nguyên cách đã tính.</div></div>
  <div class="card"><b>Giao diện</b><div class="seg" style="margin-top:8px">${[['','Theo máy'],['light','Sáng'],['dark','Tối']].map(([k,l])=>`<button class="${S.set.theme===k?'on':''}" onclick="S.set.theme='${k}';save();theme();render()">${l}</button>`).join('')}</div></div>
