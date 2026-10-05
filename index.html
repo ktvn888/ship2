@@ -40,8 +40,11 @@ nav span{display:block;font-size:20px}
 .trip{border-left:5px solid var(--ac)}.trip.run{border-color:var(--wa)}.trip.cancel{border-color:var(--mu);opacity:.65}
 .sheet{position:fixed;inset:0;background:#0007;z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .box{background:var(--card);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
-.chart{display:flex;align-items:flex-end;gap:3px;height:120px;overflow-x:auto}.chart div{flex:1;min-width:14px;background:var(--ac);border-radius:4px 4px 0 0;position:relative}
-.cl{display:flex;gap:3px;overflow-x:auto}.cl span{flex:1;min-width:14px;font-size:9px;text-align:center;color:var(--mu)}
+.cw{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px}
+.cc{flex:0 0 44px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}
+.cb{height:150px;width:100%;display:flex;align-items:flex-end;justify-content:center;border-bottom:2px solid var(--ln);background:linear-gradient(var(--ln) 1px,transparent 1px) 0 0/100% 50%}
+.cb i{display:block;width:70%;background:var(--ac);border-radius:6px 6px 0 0}
+.cv{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}.cd{font-size:11px;color:var(--mu)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid .card{margin:0}
 .toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:12px;z-index:30;font-size:14px}
 .sw{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0}.sw input{width:26px;min-height:26px}
@@ -71,6 +74,7 @@ const num=v=>Math.max(0,Math.round(parseFloat(v)||0));
 const dkey=ts=>new Date(ts).toLocaleDateString('sv-SE');
 const tm=ts=>new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
 const dt=ts=>new Date(ts).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const short=v=>v>=1e6?(v/1e6).toFixed(2).replace(/\.?0+$/,'').replace('.',',')+'tr':Math.round(v/1000)+'k';
 const inc=t=>t.net+(t.bonus||0)+(t.tip||0); // thu nhập 1 cuốc = ròng + thưởng + tip
 const cls=n=>n>0?'pos':n<0?'neg':'';
 function toast(m){const e=document.createElement('div');e.className='toast';e.textContent=m;document.body.append(e);setTimeout(()=>e.remove(),2200)}
@@ -291,8 +295,18 @@ function viewStats(){
  <div class="grid"><div class="card"><div class="mu">Doanh thu</div><b class="big" style="font-size:20px">${money(rev)}</b></div><div class="card"><div class="mu">Tổng phí</div><b class="big" style="font-size:20px">${money(fee)}</b></div>
  <div class="card"><div class="mu">Thực nhận</div><b class="big" style="font-size:20px">${money(net)}</b></div><div class="card"><div class="mu">Lợi nhuận sau chi phí</div><b class="big ${cls(net-ex)}" style="font-size:20px">${money(net-ex)}</b></div></div>
  <div class="card" style="margin-top:10px">Tiền thưởng cuốc (đã tính trong thực nhận): <b>${money(bon)}</b><br>Tip (đã tính trong thực nhận): <b>${money(tip)}</b><br>Chi phí: <b>${money(ex)}</b><br>Số cuốc hoàn thành: <b>${done.length}</b><br><span class="mu">${cnt}</span><br>Thu nhập TB/cuốc: <b>${money(done.length?net/done.length:0)}</b><br>% Grab lấy TB (Bike): <b>${bp.toFixed(1)}%</b> · % bạn nhận TB: <b>${bk.length?(100-bp).toFixed(1):0}%</b></div>
- <h2>Thu nhập theo ngày</h2><div class="card"><div class="chart">${ks.map(k=>`<div title="${k}: ${money(days[k]||0)}" style="height:${Math.max(2,(days[k]||0)/mx*100)}%"></div>`).join('')}</div>
- <div class="cl">${ks.map(k=>`<span>${k.slice(8)}</span>`).join('')}</div><div class="mu">Cao nhất: ${money(mx>1?mx:0)}</div></div>
+ <div class="card mu" style="font-size:13px;line-height:1.6"><b style="color:var(--tx)">Cách tính</b><br>
+ • <b>Doanh thu</b> = cộng “tiền phải thu” của các cuốc hoàn thành (cuốc ngoài: số tiền khách trả) = ${money(rev)}<br>
+ • <b>Tổng phí</b> = cộng (phải thu − ròng) của cuốc Bike/Food/Express = ${money(fee)}. Với Food/Express, tiền phải thu có thể gồm cả tiền món ứng cho quán nên số này có thể lớn hơn phí thật của Grab.<br>
+ • <b>Thực nhận</b> = tiền ròng ${money(net-bon-tip)} + thưởng ${money(bon)} + tip ${money(tip)} = ${money(net)}<br>
+ • <b>Lợi nhuận</b> = thực nhận − chi phí = ${money(net)} − ${money(ex)} = ${money(net-ex)}<br>
+ • <b>Thu nhập TB/cuốc</b> = thực nhận ÷ số cuốc hoàn thành<br>
+ • <b>% Grab lấy (Bike)</b> = tổng (phải thu − ròng) ÷ tổng phải thu × 100. <b>% bạn nhận</b> = 100% − % Grab lấy.</div>
+ <h2>Thu nhập theo ngày</h2><div class="card">
+ <div class="mu" id="cinfo" style="margin-bottom:8px">${ks.length?`Tổng <b>${money(ks.reduce((a,k)=>a+(days[k]||0),0))}</b> · TB mỗi ngày có chạy <b>${money(ks.filter(k=>days[k]).length?ks.reduce((a,k)=>a+(days[k]||0),0)/ks.filter(k=>days[k]).length:0)}</b><br>Chạm vào cột để xem chi tiết. Cột cam = ngày cao nhất.`:'Chưa có dữ liệu.'}</div>
+ <div class="cw">${ks.map(k=>{const v=days[k]||0,wd=['CN','T2','T3','T4','T5','T6','T7'][new Date(k+'T00:00').getDay()];
+  return `<div class="cc" onclick="$('cinfo').innerHTML='<b>${wd} ${k.slice(8)}/${k.slice(5,7)}</b>: ${money(v)}'"><span class="cv">${v?short(v):'–'}</span>
+  <div class="cb"><i style="height:${v?Math.max(4,v/mx*100):0}%;${v&&v===mx?'background:var(--wa)':''}"></i></div><span class="cd">${k.slice(8)}/${k.slice(5,7)}</span><span class="cd" style="opacity:.7">${wd}</span></div>`}).join('')}</div></div>
  <div class="row sp"><h2>Danh sách cuốc (${tr.length})</h2>${tr.length?'<button class="s d" onclick="delFiltered()">Xoá danh sách này</button>':''}</div>`+(tr.length?tr.slice().reverse().map(t=>tripCard(t)).join(''):'<div class="card mu">Không có cuốc phù hợp bộ lọc.</div>')+
  (S.shifts.length?'<h2>Các ca đã kết thúc</h2>'+S.shifts.slice(0,15).map(s=>`<div class="card">${dt(s.start)} → ${tm(s.end)} · ${s.n} cuốc<br>Thực nhận ${money(s.net)} · Lợi nhuận <b class="${cls(s.profit)}">${money(s.profit)}</b><br>Tiền mặt: dự kiến ${money(s.exp)}, thực tế ${money(s.act)} → <b class="${cls(s.diff)}">${s.diff>=0?'thừa':'thiếu'} ${money(Math.abs(s.diff))}</b></div>`).join(''):'')}
 
@@ -321,7 +335,8 @@ function wipe(){ask('Xoá TOÀN BỘ dữ liệu (cuốc, chi phí, ví, ca)? Kh
 function theme(){const t=S.set.theme;if(t)document.documentElement.dataset.theme=t;else delete document.documentElement.dataset.theme}
 function render(){
  const V={home:viewHome,wallet:viewWallet,stats:viewStats,set:viewSet};
- $('app').innerHTML=V[tab]();$('fab').style.display=(tab==='home'||tab==='stats')?'':'none';
+ $('app').innerHTML=V[tab]();const cw=document.querySelector('.cw');if(cw)cw.scrollLeft=cw.scrollWidth; // cuộn tới ngày mới nhất
+ $('fab').style.display=(tab==='home'||tab==='stats')?'':'none';
  $('nav').innerHTML=[['home','🏍️','Hôm nay'],['wallet','👛','Ví'],['stats','📊','Thống kê'],['set','⚙️','Cài đặt']].map(([k,i,l])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';render();scrollTo(0,0)"><span>${i}</span>${l}</button>`).join('')}
 theme();render();
 </script>
